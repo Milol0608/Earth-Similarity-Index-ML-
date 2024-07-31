@@ -1,30 +1,54 @@
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from tensorflow.keras.datasets import mnist
 
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
-x_train = x_train.reshape(-1, 28*28).astype('float32') / 255.0
-x_test = x_test.reshape(-1, 28*28).astype('float32') / 255.0
+# Load the data
+data = pd.read_excel(r'C:\Users\milob\OneDrive\Escritorio\PLANETS_WITH_ESI.xlsm')
 
+# Drop non-numeric columns
+data = data.select_dtypes(include=[np.number])
 
-#Functional API (more flexible)
+# Fill missing values with the mean of each column
+data = data.fillna(data.mean())
 
+# Split the data into features and target
+X = data.iloc[:, :-1].values
+y = data.iloc[:, -1].values  # ESI values
 
-inputs = keras.Input(shape=(28*28,))
-x = layers.Dense(512, activation='relu')(inputs)
-x = layers.Dense(256, activation='relu')(x)
-outputs = layers.Dense(10, activation='softmax')(x)
+# Scale features and target variable
+scaler_X = StandardScaler()
+X_scaled = scaler_X.fit_transform(X)
+
+scaler_y = StandardScaler()
+y_scaled = scaler_y.fit_transform(y.reshape(-1, 1))
+
+# Check for NaNs or infinities
+X_scaled = np.nan_to_num(X_scaled, nan=0.0, posinf=0.0, neginf=0.0)
+
+# Split into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_scaled, test_size=0.2, random_state=42)
+
+# Build the model
+inputs = keras.Input(shape=(X_train.shape[1],))
+x = layers.Dense(256, activation='relu')(inputs)
+x = layers.Dense(128, activation='relu')(x)
+outputs = layers.Dense(1)(x)
 model = keras.Model(inputs=inputs, outputs=outputs)
 
 print(model.summary())
 model.compile(
-    loss=keras.losses.SparseCategoricalCrossentropy(from_logits=False),
-    optimizer=keras.optimizers.Adam(learning_rate=0.001),
-    metrics=['accuracy']
+    loss=keras.losses.MeanSquaredError(),
+    optimizer=keras.optimizers.Adam(learning_rate=0.0001),
+    metrics=['mae', 'accuracy']
 )
-model.fit(x_train, y_train, batch_size=32, epochs=5, verbose=2)
-model.evaluate(x_test, y_test, batch_size=32, verbose=2)
+
+class DebugCallback(keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        print(f"Epoch {epoch + 1}: loss = {logs.get('loss')}, mae = {logs.get('mae')}")
+
+model.fit(X_train, y_train, batch_size=100, epochs=150, verbose=2, callbacks=[DebugCallback()])
+model.evaluate(X_test, y_test, batch_size=100, verbose=2)

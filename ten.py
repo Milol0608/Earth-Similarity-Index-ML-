@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
-data = pd.read_excel(r'C:\Users\milob\OneDrive\Escritorio\PLANETS_WITH_ESI.xlsm')
+data = pd.read_excel(r'C:\Users\File_Location') #Change to File Location
 
 data = data.select_dtypes(include=[np.number])
 

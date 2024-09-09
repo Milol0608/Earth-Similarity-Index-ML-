@@ -1,1 +1,1 @@
-
+This is  a Machine Learning, algortihm that pulls data from a database at https://phl.upr.edu/projects/habitable-exoplanets-catalogc, and calculates variables needed, and weights to form an ESI (Earth Similarity Index) value from 0 to 1.
